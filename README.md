@@ -1,40 +1,40 @@
-# Sum System
+# Система суммирования
 
-This program demonstrates a threaded summation pipeline using POSIX threads and synchronized shared resources. One hundred producer threads generate random integers, a dispatcher coordinates pairing values for computation, and summator threads iteratively reduce the buffer until a single result remains.
+Эта программа демонстрирует многопоточный конвейер суммирования с использованием POSIX-потоков и синхронизируемых разделяемых ресурсов. Сто потоков-производителей генерируют случайные целые числа, диспетчер координирует попарное объединение значений для вычислений, а потоки-сумматоры итеративно уменьшают содержимое буфера, пока не останется один результат.
 
-## Architecture
+## Архитектура
 
-- **Producers (100 threads):** Each sleeps 1–7 seconds, generates a random integer (1–100), pushes it to the shared buffer, logs the action, and exits.
-- **Bounded buffer:** Circular queue with mutex and two condition variables enabling blocking put/get operations. Capacity defaults to 128 to accommodate all producers.
-- **Dispatcher:** Waits without busy looping. When at least two items are available, it removes a pair and spawns a summator. It tracks active summators and terminates only when producers are done, no summators remain, and the buffer holds one final element.
-- **Summators:** Sleep 3–6 seconds, compute the sum of their pair, push the result back to the buffer, log progress, and decrement the active-summator counter.
-- **Logging:** Thread-safe printing with relative timestamps to stdout for reproducible, readable traces.
+* **Производители (100 потоков):** Каждый поток спит 1–7 секунд, генерирует случайное целое число (1–100), помещает его в общий буфер, логирует действие и завершает работу.
+* **Ограниченный буфер:** Кольцевая очередь с мьютексом и двумя условными переменными, обеспечивающими блокирующие операции вставки и извлечения. Вместимость по умолчанию — 128, чтобы уместить все значения от производителей.
+* **Диспетчер:** Ожидает без активного ожидания. Когда доступно как минимум два элемента, он удаляет пару и создаёт поток-сумматор. Отслеживает активные сумматоры и завершает работу только тогда, когда производители закончили, сумматоров не осталось, а в буфере находится один финальный элемент.
+* **Сумматоры:** Спят 3–6 секунд, вычисляют сумму своей пары, помещают результат обратно в буфер, логируют прогресс и уменьшают счётчик активных сумматоров.
+* **Логирование:** Потокобезопасный вывод с относительными метками времени в stdout для воспроизводимых и читаемых трасс.
 
-## Building
+## Сборка
 
 ```sh
 make
 ```
 
-This compiles the `sum_system` executable using `gcc` with POSIX thread support.
+Эта команда компилирует исполняемый файл `sum_system` с использованием `gcc` и поддержкой POSIX-потоков.
 
-## Running
+## Запуск
 
 ```sh
 ./sum_system
 ```
 
-On each execution the random seeds produce different delays and values, but the protocol remains deterministic: threads log start/finish messages, and the dispatcher reports the final value once only one number remains in the buffer.
+При каждом запуске разные начальные значения генератора случайных чисел приводят к различным задержкам и значениям, но структура протокола остаётся детерминированной: потоки логируют сообщения о начале и завершении работы, а диспетчер сообщает итоговое значение, когда в буфере остаётся только одно число.
 
-## Project Structure
+## Структура проекта
 
-- `main.c` — Initializes shared state, launches producers and dispatcher, joins threads, and prints completion messages.
-- `buffer.c` / `buffer.h` — Bounded queue implementation with blocking put/get operations using mutexes and condition variables.
-- `workers.c` / `workers.h` — Thread entry points and shared counters for producers, dispatcher, and summators.
-- `log.c` / `log.h` — Thread-safe logging utilities with timestamped output.
-- `Makefile` — Build targets for compiling (`make`) and cleanup (`make clean`).
+* `main.c` — инициализирует разделяемое состояние, запускает производителей и диспетчер, ожидает завершения потоков и выводит финальные сообщения.
+* `buffer.c` / `buffer.h` — реализация ограниченной очереди с блокирующими операциями вставки и извлечения, использующая мьютексы и условные переменные.
+* `workers.c` / `workers.h` — точки входа потоков и общие счётчики для производителей, диспетчера и сумматоров.
+* `log.c` / `log.h` — потокобезопасные утилиты логирования с выводом временных меток.
+* `Makefile` — цели сборки (`make`) и очистки (`make clean`).
 
-## Notes
+## Примечания
 
-- The program avoids data races via disciplined mutex/condvar usage; no active waiting is used.
-- Randomness is seeded in `main` with `srand(time(NULL))`; threads rely on `rand_r` for thread-safe generation.
+* Программа избегает гонок данных за счёт аккуратного использования мьютексов и условных переменных; активное ожидание не используется.
+* Инициализация генератора случайных чисел выполняется в `main` с помощью `srand(time(NULL))`; потоки используют `rand_r` для потокобезопасной генерации случайных значений.
